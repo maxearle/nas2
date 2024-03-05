@@ -7,21 +7,75 @@ import numpy as np
 from PyQt6 import QtCore, QtGui, QtWidgets
 import sys
 
-def next_n_squared(val: int) -> int:
-    """Returns the first n for which n**2 > val."""
-    n = 1
-    while True:
-        if n**2 > val:
-            return n
-        else:
-            n += 1
-
 class MplCanvas(FigureCanvasQTAgg):
     """MPL/QT Canvas with some default characteristics and some axes."""
     def __init__(self, parent=None, width=5, height=4, dpi=100):
         fig = Figure(figsize=(width, height), dpi=dpi)
         self.axes = fig.add_subplot(111)
         super(MplCanvas, self).__init__(fig)
+
+    def clear(self):
+        self.axes.cla()
+
+class PlotWithToolbar(QWidget):
+    def __init__(self, title, autoscale = True):
+        super().__init__()
+        self.title = title
+        self.wLayout = QVBoxLayout()
+        self.canvas = MplCanvas(self)
+        self.toolbar = NavigationToolbar2QT(self.canvas, self)
+        self.canvas.axes.set_title(title)
+        self.canvas.axes.autoscale(autoscale)
+
+        self.setLayout(self.wLayout)
+        self.wLayout.addWidget(self.canvas)
+        self.wLayout.addWidget(self.toolbar)
+
+    def clear_axes(self):
+        self.canvas.clear()
+        self.label_x("")
+        self.label_y("")
+        self.canvas.axes.set_title(self.title)
+        self.canvas.draw()
+
+    def plot(self, x_data, y_data, **kwargs):
+        artist = self.canvas.axes.plot(x_data, y_data, **kwargs)
+        self.canvas.draw()
+        return artist
+    
+    def scatter(self, x_data, y_data, **kwargs):
+        artist = self.canvas.axes.scatter(x_data, y_data, **kwargs)
+        self.canvas.draw()
+        return artist
+
+    def plot_point(self, point: Point, **kwargs):
+        artist = self.canvas.axes.plot(point.x, point.y, **kwargs)
+        self.canvas.draw()
+        return artist
+    
+    def fill_between(self, x, y1, y2, **kwargs):
+        poly = self.canvas.axes.fill_between(x,y1,y2,**kwargs)
+        self.canvas.draw()
+        return poly
+
+    def label_x(self, new_label, **kwargs):
+        self.canvas.axes.set_xlabel(new_label, **kwargs)
+        self.canvas.draw()
+
+    def label_y(self, new_label, **kwargs):
+        self.canvas.axes.set_ylabel(new_label, **kwargs)
+        self.canvas.draw()
+
+    def update_toolbar(self):
+        self.toolbar.update()
+
+    def set_lims(self, top, bottom, left, right):
+        self.canvas.axes.set_xlim(left, right)
+        self.canvas.axes.set_ylim(bottom, top)
+        self.canvas.draw()
+
+    def update(self):
+        self.canvas.draw()
 
 class IOPanel(QWidget):
     """Input/Output panel class for input directory and output filepath selection."""
@@ -208,7 +262,100 @@ class SettingsControlPanel(QWidget):
     def button_keys(self):
         """Get view of button keys"""
         return self.buttons.keys()
+    
+class MainWindow2(QMainWindow):
+    closed = pyqtSignal()
+    def __init__(self, title: str):
+        """Initialise main window layout and sublayouts."""
+        super().__init__()
+        self.setWindowTitle(title)
+        widget = QWidget()
+        self.mainLayout = QVBoxLayout()
+        widget.setLayout(self.mainLayout)
+        self.setCentralWidget(widget)
+        self._initialise_IO()
+        self.mainLayout.addWidget(HSeparator())
+        self._initialise_plots()
+        self._initialise_settings_and_controls()
 
+    def _initialise_IO(self):
+        """Initialise IO panel for choosing directory containing tdms files."""
+        IOLayout = QHBoxLayout()
+        #LABELS
+        self.inputLabel = QLabel("Choose directory containing .tdms files for extraction:")
+        #LINE EDITS
+        self.inputLineEdit = QLineEdit()
+        #BUTTONS
+        self.browseButton = QPushButton(text="Browse")
+        self.startButton = QPushButton(text="Validate Choice and Start")
+        #PACKING
+        IOLayout.addWidget(self.inputLabel)
+        IOLayout.addWidget(self.inputLineEdit)
+        IOLayout.addWidget(self.browseButton)
+        IOLayout.addWidget(VSeparator())
+        IOLayout.addWidget(self.startButton)
+        #PACK INTO MAIN LAYOUT
+        self.mainLayout.addLayout(IOLayout)
+
+    def _initialise_plots(self):
+        """Initialise plots panel containing trace plot and event plot."""
+        PlotsLayout = QHBoxLayout()
+        #PLOTS
+        self.tracePlot = PlotWithToolbar("Trace Plot")
+        self.eventPlot = PlotWithToolbar("Event Plot")
+        #PACK
+        PlotsLayout.addWidget(self.tracePlot)
+        PlotsLayout.addWidget(VSeparator())
+        PlotsLayout.addWidget(self.eventPlot)
+        #PACK INTO MAIN LAYOUT
+        self.mainLayout.addLayout(PlotsLayout)
+
+    def _initialise_settings_and_controls(self):
+        """Initialise settings and control panel containing settings and controls."""
+        #LAYOUTS
+        PanelLayout = QHBoxLayout()
+        StartUpSettingsLayout = QVBoxLayout()
+        ControlsLayout = QGridLayout()
+        #SETTINGS FIELDS
+        self.sampleRateSetting = SettingField("Measurement Sample Rate:")
+        self.eventThresholdSetting = SettingField("Event Threshold /nA:")
+        self.eventBerthSetting = SettingField("Event Berth (Gap Each Side) /samples:")
+        self.gapTolSetting = SettingField("Gap Tolerance (Max No. of Samples Below Threshold in Event):")
+        #CONTROLS
+        self.acceptButton = QPushButton(text="Accept Event")
+        self.rejectButton = QPushButton(text="Reject Event")
+        self.keepAcceptingButton = QPushButton(text="Keep Accepting")
+        self.keepRejectingButton = QPushButton(text="Keep Rejecting")
+        self.pauseButton = QPushButton("Pause")
+        self.turboMode = QPushButton("Toggle Turbo Mode (Turn On/Off Plotting)")
+        #LOOP DELAY SETTING
+        self.loopDelaySetting = SettingField("Loop Delay /ms")
+        #PACK SETTINGS
+        pass
+        #TODO write this
+        pass
+
+    def lock_IO_panel(self):
+        pass
+
+    def unlock_IO_panel(self):
+        pass
+
+    def lock_start_settings(self):
+        pass
+
+    def unlock_start_settings(self):
+        pass
+
+    def lock_some_controls(self):
+        pass
+
+    def unlock_some_controls(self):
+        pass
+
+    def closeEvent(self):
+        """Causes window to emit 'closed' signal when closed"""
+        self.closed.emit()
 
 class MainWindow(QMainWindow):
     closed = pyqtSignal()
@@ -261,7 +408,6 @@ class SettingField(QWidget):
         self.type = field_type
         if field_type == "line":
             self.field = QLineEdit()
-            self.field.setFixedWidth(150)
         elif field_type == "check":
             self.field = QCheckBox()
         else:
@@ -283,6 +429,12 @@ class SettingField(QWidget):
             self.field.setText(str(val))
         elif self.type == 'check':
             self.field.setChecked(val)
+
+    def lock_field(self):
+        self.field.setEnabled(False)
+
+    def unlock_field(self):
+        self.field.setEnabled(True)
 
     def field_name(self) -> str:
         """Get name of field"""
