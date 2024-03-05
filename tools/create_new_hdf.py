@@ -1,3 +1,8 @@
+"""
+Use this script to create a new hdf5 from another one according to named events in  props.pkl file.
+After filtering, you can use this to remove events from the hdf5.
+"""
+
 import pandas as pd
 import h5py as h
 import os

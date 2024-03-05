@@ -1,3 +1,8 @@
+"""
+LEGACY:
+Was previously used to turn attrs attached to datasets in an hdf5 into a dataframe for use with multi-filter.
+"""
+
 import pandas as pd
 import numpy as np
 import h5py

@@ -1,4 +1,6 @@
-"""Use this script to analyse a TDMS file for diagnostic purposes."""
+"""
+Use this script to analyse a TDMS file for diagnostic purposes.
+"""
 
 import nptdms as nt
 
