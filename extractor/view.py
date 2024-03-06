@@ -216,8 +216,9 @@ class MainWindow(QMainWindow):
         self._initialise_IO()
         self.mainLayout.addWidget(HSeparator())
         self._initialise_plots()
+        self.mainLayout.addWidget(HSeparator())
         self._initialise_settings_and_controls()
-        
+
         self.show()
 
     def _initialise_IO(self):
@@ -258,6 +259,10 @@ class MainWindow(QMainWindow):
         PanelLayout = QHBoxLayout()
         StartUpSettingsLayout = QVBoxLayout()
         ControlsLayout = QGridLayout()
+        #LABELS
+        self.settingsLabel = QLabel("Extractor Settings (Locked on pressing Start)")
+        self.controlsLabel = QLabel("Controls")
+        self.controlsLabel.setFixedHeight(10)
         #SETTINGS FIELDS
         self.sampleRateSetting = SettingField("Measurement Sample Rate:")
         self.eventThresholdSetting = SettingField("Event Threshold /nA:")
@@ -273,15 +278,50 @@ class MainWindow(QMainWindow):
         #LOOP DELAY SETTING
         self.loopDelaySetting = SettingField("Loop Delay /ms")
         #PACK SETTINGS
-        pass
-        #TODO write this
-        pass
+        StartUpSettingsLayout.addWidget(self.settingsLabel)
+        StartUpSettingsLayout.addWidget(self.sampleRateSetting)
+        StartUpSettingsLayout.addWidget(self.eventThresholdSetting)
+        StartUpSettingsLayout.addWidget(self.eventBerthSetting)
+        StartUpSettingsLayout.addWidget(self.gapTolSetting)
+        #PACK CONTROLS
+        ControlsLayout.addWidget(self.controlsLabel,0,0,1,2)
+        ControlsLayout.addWidget(self.turboMode,1,1,1,2)
+        ControlsLayout.addWidget(self.acceptButton,2,1)
+        ControlsLayout.addWidget(self.rejectButton,2,2)
+        ControlsLayout.addWidget(self.keepAcceptingButton,3,1)
+        ControlsLayout.addWidget(self.keepRejectingButton,3,2)
+        ControlsLayout.addWidget(self.pauseButton,4,1,1,2)
+        ControlsLayout.addWidget(HSeparator(), 5, 1, 1, 2)
+        ControlsLayout.addWidget(self.loopDelaySetting,6,1,1,2)
+        #PACK LAYOUT
+        PanelLayout.addLayout(StartUpSettingsLayout)
+        PanelLayout.addWidget(VSeparator())
+        PanelLayout.addLayout(ControlsLayout)
+        self.mainLayout.addLayout(PanelLayout)
+        #PACKAGE SETTINGS INTO LIST FOR EASY READING
+        self.settings = [self.sampleRateSetting,self.eventThresholdSetting, self.eventBerthSetting, self.gapTolSetting]
+        self.setting_names = ["sample_rate", "event_thresh", "event_berth", "gap_tol"]
+
+    def get_all_settings(self) -> dict:
+        """Get value of every setting and return in dictionary"""
+        settings_dict={}
+        for (setting, name) in (self.settings, self.setting_names):
+            settings_dict[name]=setting.get_val()
+        return settings_dict
 
     def lock_IO_panel(self):
-        pass
+        #Disable buttons
+        self.browseButton.setEnabled(False)
+        self.startButton.setEnabled(False)
+        #Disable line edit
+        self.inputLineEdit.setReadOnly(True)
 
     def unlock_IO_panel(self):
-        pass
+        #Enable buttons
+        self.browseButton.setEnabled(True)
+        self.startButton.setEnabled(True)
+        #Disable line edit
+        self.inputLineEdit.setReadOnly(False)
 
     def lock_start_settings(self):
         pass
@@ -289,13 +329,13 @@ class MainWindow(QMainWindow):
     def unlock_start_settings(self):
         pass
 
-    def lock_some_controls(self):
+    def lock_controls_loop(self):
         pass
 
-    def unlock_some_controls(self):
+    def unlock_controls_loop(self):
         pass
 
-    def closeEvent(self):
+    def closeEvent(self,_):
         """Causes window to emit 'closed' signal when closed"""
         self.closed.emit()
 
