@@ -7,44 +7,67 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 from math import ceil
-
-def is_nan_ignore_None(val) -> bool:
-    """Convenience function to get around the fact that np.isnan gets confused if you throw it a None"""
-    if val is None:
-        return False
-    elif np.isnan(val):
-        return True
-    else:
-        return False
+from utils.util_funcs import check_path_existence, is_nan_ignore_None, dir_contains_ext
+from view import MainWindow
+from model import Model
+import glob
 
 class Controller():
     """This class is the home of all the spaghetti in this program. It ties together the view part of the program(GUI) and the underlying
     model (the data processing). It's not perfect in places, would be more readable if some changes to the UI and model were refactored as methods of the
     MainWindow and Model classes rather than implementing them here."""
-    def __init__(self, view, model):
+    def __init__(self, view: MainWindow, model: Model):
         self._v = view
         self._m = model
-        self.grp_name = "current_data" #Name of base group in output hdf5 file
         self.accepted_count = 0 #Tracks events accepted so far
         self.current_trace_n = 0 #Tracks batches of samples seen so far
         self.n_trace = 0 #Total number of traces to be looked at
         self.accepted_events = 0
         self.rejected_events = 0
-        self.accept_timer = QTimer(self._v, interval = int(self._v.cfg["Loop delay"]), timeout = self.accept_event)
-        self.reject_timer = QTimer(self._v, interval = int(self._v.cfg["Loop delay"]), timeout = self.reject_event)
+        self._get_default_settings()
+        self.settings_dict = self._v.get_all_settings()
+        self.accept_timer = QTimer(self._v, interval = int(self.settings_dict["loop_delay"]), timeout = self.accept_event)
+        self.reject_timer = QTimer(self._v, interval = int(self.settings_dict["loop_delay"]), timeout = self.reject_event)
         self._connect_IO_buttons()
         self._connect_start_button()
 
     #INITIALISATION FUNCTIONS THAT RUN SUCCESSFULLY ONLY ONCE
+        
+    def _get_default_settings(self):
+        cfg_filename = os.path.join(os.getcwd(),"cfg.txt")
+        with open(cfg_filename) as f:
+            for line in f:
+                if line[0] == "#":
+                    continue
+                no_space = "".join(line.split())
+                split = no_space.split('=')
+                if len(split) > 2:
+                    ErrorDialog("cfg file should have only one setting per line!")
+                    self._v.close()
+                try:
+                    self._v.settings_dict[split[0]].set_val(split[1])
+                except:
+                    ErrorDialog(f"Issue setting {split[0]} to {split[1]}; check setting name is correct (should be one of {self._v.settings_dict.keys()}).")
+                    self._v.close()
 
     def _connect_IO_buttons(self):
-        self._v.io.in_browse_button.clicked.connect(self.open_dir_dialog)
-        self._v.io.out_browse_button.clicked.connect(self.open_file_dialog)
+        self._v.browseButton.clicked.connect(self.open_dir_dialog)
 
     def _initialise_data_and_display(self):
-        self._m.open_tdms_dir(self._v.io.get_input_dir())
-        self._m.make_output_file(self._v.io.get_output_path())
-        self._m.add_group(self.grp_name, attrs = {"sample_rate":int(self._v.cfg["Sample Rate"])})
+        #Checking path/file validity
+        data_location = self._v.inputLineEdit.text()
+        if not check_path_existence(data_location):
+            ErrorDialog("Selected data path does not exist!")
+            return None
+        if not dir_contains_ext(data_location,'tdms'):
+            ErrorDialog("Selected directory contains no .tdms files.")
+            return None
+        self.dir_path = data_location
+        self._m.open_tdms_dir(self.dir_path)
+        self._m.make_output_file(os.path.join(self.dir_path, 'EVENTS.hdf5'))
+        self._m.add_group('current_data', attrs = {"sample_rate":self.settings_dict["sample_rate"].get_val()})
+
+        #TODO REACHED HERE
 
         self._v.plots.set_l_label(f"Trace Plot: {self.current_trace_n}/{len(self._m.tdms)}")
         self.process_next()

@@ -173,10 +173,11 @@ class MainWindow(QMainWindow):
         #PACKAGE SETTINGS INTO LIST FOR EASY READING
         self.settings = [self.sampleRateSetting,self.eventThresholdSetting, self.eventBerthSetting, self.gapTolSetting, self.loopDelaySetting]
         self.setting_names = ["sample_rate", "event_thresh", "event_berth", "gap_tol", "loop_delay"]
+        self.settings_dict = dict(zip(self.setting_names,self.settings))
         #PACKAGE CONTROLS INTO LIST FOR EASY HANDLING
         self.controls = [self.acceptButton, self.rejectButton,self.keepAcceptingButton,self.keepRejectingButton, self.pauseButton, self.turboMode]
 
-    def get_all_settings(self) -> dict:
+    def get_all_settings(self) -> dict[str,'SettingField']:
         """Get value of every setting and return in dictionary"""
         settings_dict={}
         for (setting, name) in (self.settings, self.setting_names):
