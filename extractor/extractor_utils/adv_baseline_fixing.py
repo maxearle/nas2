@@ -159,14 +159,14 @@ def find_most_persistent_value(indata, area_thresh=0.05, smoothing=1, n_bins = 5
     sig_ars_bool = ars > np.trapz(cts_smoothed)*area_thresh #Get a mask for peaks with areas representing greater than 10% of the total
     sig_pklims = list(compress(pklims, sig_ars_bool)) #Get corresponding significant peak lims
 
-    avg_run = np.array([])
+    max_run = np.array([])
     for pair in sig_pklims:
         bools = np.logical_and((indata >= bin_lims[pair[0]][0]), (indata <= bin_lims[pair[1]][1]))
         rns = rle(bools)
         lns = rns[0][rns[2]]
-        mu = np.mean(lns)
-        avg_run = np.append(avg_run,mu)
-    return [[bin_lims[sig_pklims[i][0]][0], bin_lims[sig_pklims[i][1]][1]] for i in np.arange(len(sig_pklims))], avg_run
+        mx = np.max(lns)
+        max_run = np.append(max_run,mx)
+    return [[bin_lims[sig_pklims[i][0]][0], bin_lims[sig_pklims[i][1]][1]] for i in np.arange(len(sig_pklims))], max_run
 
 if __name__ == "__main__":
     filename = r"E:\Raluca29Feb24\0.0025TWEEN_300pmsample4.3\2600_24-02-29_1359_006.tdms"
