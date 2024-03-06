@@ -1,0 +1,7 @@
+#Write default settings in here and they'll automatically populate the fields on startup.
+#Options are: "sample_rate", "event_thresh", "event_berth", "gap_tol", "loop_delay"
+sample_rate=1000000
+loop_delay=50
+event_thresh=-0.06
+event_berth=500
+gap_tol=1000

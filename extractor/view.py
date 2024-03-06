@@ -39,6 +39,10 @@ class PlotWithToolbar(QWidget):
         self.canvas.axes.set_title(self.title)
         self.canvas.draw()
 
+    def set_title(self, title: str):
+        self.canvas.axes.set_title(title)
+        self.canvas.draw()
+
     def plot(self, x_data, y_data, **kwargs):
         artist = self.canvas.axes.plot(x_data, y_data, **kwargs)
         self.canvas.draw()
@@ -220,6 +224,16 @@ class MainWindow(QMainWindow):
             control.setEnabled(True)
         self.loopDelaySetting.unlock_field()
 
+    def lock_all_controls(self):
+        for control in self.controls:
+            control.setEnabled(False)
+        self.loopDelaySetting.lock_field()
+    
+    def unlock_all_controls(self):
+        for control in self.controls:
+            control.setEnabled(True)
+        self.loopDelaySetting.unlock_field()
+
     def closeEvent(self,_):
         """Causes window to emit 'closed' signal when closed"""
         self.closed.emit()
@@ -269,10 +283,16 @@ class SettingField(QWidget):
             self.field.setChecked(val)
 
     def lock_field(self):
-        self.field.setEnabled(False)
+        if self.type == 'line':
+            self.field.setReadOnly(True)
+        else:
+            self.field.setEnabled(False)
 
     def unlock_field(self):
-        self.field.setEnabled(True)
+        if self.type == 'line':
+            self.field.setReadOnly(False)
+        else:
+            self.field.setEnabled(True)
 
     def field_name(self) -> str:
         """Get name of field"""
