@@ -211,12 +211,10 @@ class Model():
 
     def add_to_df(self, attrs: dict):
         new_row = pd.DataFrame([pd.Series(attrs, index = list(attrs.keys()))])
-        print(new_row)
         if self.output_df is None:
             self.output_df = pd.concat([pd.DataFrame(),new_row], ignore_index=True)
         else:
             self.output_df = pd.concat([self.output_df, new_row], ignore_index=True)
-        print(self.output_df)
         logging.info("New row successfully added to dataframe.")
         
     def next_file(self):

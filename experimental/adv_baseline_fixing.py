@@ -6,6 +6,7 @@ import numpy as np
 from itertools import compress
 from matplotlib.pyplot import cm
 from scipy.ndimage import gaussian_filter
+from scipy.optimize import curve_fit
 
 def hist_bin(df,nbins):
         min = np.min(df)
@@ -14,7 +15,7 @@ def hist_bin(df,nbins):
         bin_lims = [[min + n*bin_spacing,min + (n+1)*bin_spacing] for n in np.arange(nbins)]
         count = np.array([np.count_nonzero((bin_lims[n][0] <= df) & (df < bin_lims[n][1])) for n in np.arange(nbins)])
         bin_mids = np.mean(bin_lims, axis = 1)
-        return count, bin_mids, bin_spacing
+        return count, bin_mids, bin_spacing, bin_lims
 
 class Peak:
     def __init__(self, startidx):
@@ -151,25 +152,30 @@ def rle(inarray):
             return(z, p, ia[i])
 
 def find_most_persistent_value(indata, area_thresh=0.05, smoothing=1, n_bins = 50):
-    cts, bin_positions, _ = hist_bin(indata, n_bins)
+    cts, bin_mids, _ ,bin_lims= hist_bin(indata, n_bins)
     cts_smoothed = gaussian_filter(cts, sigma=1)
     hst_pks = get_persistent_homology(cts_smoothed)
     pklims = [find_peak_lims(cts_smoothed, hst_pks[n].born) for n in np.arange(len(hst_pks))] #Find peak lims for each peak in the histogram with the turn method
-    ars = [np.trapz(cts[l:r]) for l, r in pklims] #Get area of each peak using peak lims
-    sig_ars_bool = areas > np.trapz(cts_smoothed)*0.05 #Get a mask for peaks with areas representing greater than 10% of the total
+    ars = [np.trapz(cts[l:r]) if r < len(cts)-1 else np.trapz(cts[l:]) for l, r in pklims] #Get area of each peak using peak lims
+    sig_ars_bool = ars > np.trapz(cts_smoothed)*area_thresh #Get a mask for peaks with areas representing greater than 10% of the total
     sig_pklims = list(compress(pklims, sig_ars_bool)) #Get corresponding significant peak lims
 
-    avg_run = np.array([])
+    max_run = np.array([])
+    peaks = np.array([])
     for pair in sig_pklims:
-        bools = np.logical_and((indata > bin_positions[pair[0]]), (indata < bin_positions[pair[1]]))
+        bools = np.logical_and((indata >= bin_lims[pair[0]][0]), (indata <= bin_lims[pair[1]][1]))
         rns = rle(bools)
         lns = rns[0][rns[2]]
-        mu = np.mean(lns)
-        np.append(avg_run,mu)
-    return bin_positions[sig_pklims], avg_run
+        mx = np.max(lns)
+        max_run = np.append(max_run,mx)
+        cts_clipped = cts_smoothed
+        cts_clipped[:pair[0]] = 0
+        cts_clipped[pair[1]] =0
+        peaks = np.append(peaks, np.argmax(cts_clipped))
+    return [[bin_lims[sig_pklims[i][0]][0], bin_lims[sig_pklims[i][1]][1]] for i in np.arange(len(sig_pklims))], max_run, peaks, bin_mids
 
 if __name__ == "__main__":
-    filename = r"E:\Raluca29Feb24\0.0025TWEEN_300pmsample4.3\2600_24-02-29_1359_002.tdms"
+    filename = r"C:\Users\me424\Desktop\gdata\_600_24-02-19_1626_001.tdms"
     file = nt.TdmsFile.read(filename)
 
     #Find channel containing samples
@@ -184,33 +190,23 @@ if __name__ == "__main__":
         raise Exception("Couldn't find data channel.")
     data = dchan[:]
 
+    def line(x, a, b):
+                return a*x + b
+    dt = data
+    dt_x = np.arange(len(dt))
+    value_persistence = find_most_persistent_value(dt,area_thresh=0)
+    print(value_persistence)
+    bsln_range = value_persistence[0][np.argmax(value_persistence[1])]
+    bsln_peak = value_persistence[2][np.argmax(value_persistence[1])]
+    peak_val = value_persistence[3][int(bsln_peak)]
+    bsln_mask = np.abs(dt - peak_val) < 0.3
+    bsln_x = np.arange(len(dt))[bsln_mask]
+    bsln_y = dt[bsln_mask]
+    popt, _ = curve_fit(line, bsln_x, bsln_y)
 
-    counts, bins, spacing = hist_bin(data,50) #First, generate populations of values in equally sized bins
-    counts_smoothed = gaussian_filter(counts, sigma=1)
-    hist_peaks = get_persistent_homology(counts_smoothed) #Get peaks in the histogram
-    plims = [find_peak_lims(counts_smoothed, hist_peaks[n].born) for n in np.arange(len(hist_peaks))] #Find peak lims for each peak in the histogram with the turn method
-    print(plims)
-    areas = [np.trapz(counts[l:r]) for l, r in plims] #Get area of each peak using peak lims
-    sig_areas_mask = areas > np.sum(areas)*0.05 #Get a mask for peaks with areas representing greater than 10% of the total
-    sig_plims = list(compress(plims, sig_areas_mask)) #Get corresponding significant peak lims
-
-    for pair in sig_plims:
-        print(f"Range: {bins[[pair]]}")
-        mask = np.logical_and((data > bins[pair[0]]), (data < bins[pair[1]]))
-        print(f"Vals in range {np.count_nonzero(mask)}")
-        runs = rle(mask)
-        lens = runs[0][runs[2]]
-        avg = np.mean(lens)
-        print(f"Average run length in range: {avg}")
-        print("*********************************************************************")
-
-    color = iter(cm.rainbow(np.linspace(0, 1, len(sig_plims))))
-    fig, ax = plt.subplots()
-    ax.plot(bins,np.log(counts_smoothed))
-    for pair in sig_plims:
-        c = next(color)
-        ax.axvline(bins[pair[0]], c=c)
-        ax.axvline(bins[pair[1]], c=c)
+    corrected_data = dt - line(dt_x, *popt)
+    
     fig1,ax1 = plt.subplots()
     ax1.plot(data)
+    ax1.plot(np.arange(len(data)),line(np.arange(len(data)),*popt))
     plt.show()
