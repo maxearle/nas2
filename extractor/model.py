@@ -10,7 +10,7 @@ from itertools import compress
 import platform
 import time
 from scipy.ndimage import gaussian_filter1d
-from utils.adv_baseline_fixing import find_most_persistent_value
+from extractor_utils.adv_baseline_fixing import find_most_persistent_value
 
 class BadIndex(Exception):
     def __init__(self, *args):
@@ -172,6 +172,7 @@ class Model():
     def __init__(self):
         self.tdms = None
         self.current_data = None
+        self.corrected_data = None
         self.event_boundaries = None
         self.current_event_index = None
         self.event_data = None
@@ -255,7 +256,7 @@ class Model():
         bsln_y = dt[bsln_mask]
         popt, _ = curve_fit(line, bsln_x, bsln_y)
 
-        self.current_data = dt - line(dt_x, *popt)
+        self.corrected_data = dt - line(dt_x, *popt)
         self.bsln = np.mean(bsln_y)
         self.noise = np.std(bsln_y)
 
@@ -321,7 +322,7 @@ class Model():
                     right = pairs[-1][1]
                     new_list.append([left, right])
             return new_list
-        hits = np.where(self.current_data < thresh)[0]
+        hits = np.where(self.corrected_data < thresh)[0]
         if len(hits) == 0:
             self.event_boundaries = []
             self.current_event_index = None
@@ -342,11 +343,12 @@ class Model():
         try:
             curr_event_boundaries = self.event_boundaries[self.current_event_index]
             logging.debug("Index valid, updating boundaries")
-            self.event_data = self.current_data[(curr_event_boundaries[0] - berth):(curr_event_boundaries[1] + berth)]
+            self.event_data = self.corrected_data[(curr_event_boundaries[0] - berth):(curr_event_boundaries[1] + berth)]
             try:
                 bsln_fixed = self.fix_event_baseline(berth)
                 self.event_data = bsln_fixed
             except:
+                #TODO
                 pass
         except IndexError:
             logging.debug("Invalid event boundary selected")

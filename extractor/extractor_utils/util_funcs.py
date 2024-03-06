@@ -1,6 +1,6 @@
 import os
 import numpy as np
-import glob
+from glob import glob
 
 def check_path_existence(path: str) -> bool:
     return os.path.exists(path)

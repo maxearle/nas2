@@ -1,8 +1,9 @@
-from PyQt6.QtWidgets import QMainWindow, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QWidget, QLabel, QFrame, QCheckBox, QMessageBox
+from PyQt6.QtWidgets import QMainWindow, QLineEdit, QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QWidget, QLabel, QFrame, QCheckBox, QMessageBox, QPlainTextEdit
 from PyQt6.QtCore import pyqtSignal
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg, NavigationToolbar2QT
 from matplotlib.figure import Figure
 import numpy as np
+import logging
 
 from PyQt6 import QtCore, QtGui, QtWidgets
 import sys
@@ -19,13 +20,11 @@ class MplCanvas(FigureCanvasQTAgg):
         self.axes.cla()
 
 class PlotWithToolbar(QWidget):
-    def __init__(self, title, autoscale = True):
+    def __init__(self, autoscale = True):
         super().__init__()
-        self.title = title
         self.wLayout = QVBoxLayout()
         self.canvas = MplCanvas(self)
         self.toolbar = NavigationToolbar2QT(self.canvas, self)
-        self.canvas.axes.set_title(title)
         self.canvas.axes.autoscale(autoscale)
 
         self.setLayout(self.wLayout)
@@ -36,7 +35,11 @@ class PlotWithToolbar(QWidget):
         self.canvas.clear()
         self.label_x("")
         self.label_y("")
-        self.canvas.axes.set_title(self.title)
+        self.canvas.axes.set_title("")
+        self.canvas.draw()
+
+    def text(self,msg:str, **kwargs):
+        self.canvas.axes.text(0.5, 0.5, msg, horizontalalignment='center',verticalalignment='center', transform=self.canvas.axes.transAxes, **kwargs)
         self.canvas.draw()
 
     def set_title(self, title: str):
@@ -45,6 +48,11 @@ class PlotWithToolbar(QWidget):
 
     def plot(self, x_data, y_data, **kwargs):
         artist = self.canvas.axes.plot(x_data, y_data, **kwargs)
+        self.canvas.draw()
+        return artist
+    
+    def plot_vline(self, x, **kwargs):
+        artist = self.canvas.axes.axvline(x, **kwargs)
         self.canvas.draw()
         return artist
     
@@ -76,6 +84,21 @@ class PlotWithToolbar(QWidget):
 
     def update(self):
         self.canvas.draw()
+
+class QPlainTextEditLogger(logging.Handler):
+    def __init__(self, parent,):
+        super().__init__()
+
+        self.widget = QPlainTextEdit(parent)
+        self.widget.setReadOnly(True)
+        self.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.widget.appendPlainText(msg)
+
+    def write(self, m):
+        pass
     
 class MainWindow(QMainWindow):
     closed = pyqtSignal()
@@ -83,10 +106,10 @@ class MainWindow(QMainWindow):
         """Initialise main window layout and sublayouts."""
         super().__init__()
         self.setWindowTitle(title)
-        widget = QWidget()
+        self.widget = QWidget()
         self.mainLayout = QVBoxLayout()
-        widget.setLayout(self.mainLayout)
-        self.setCentralWidget(widget)
+        self.widget.setLayout(self.mainLayout)
+        self.setCentralWidget(self.widget)
         self._initialise_IO()
         self.mainLayout.addWidget(HSeparator())
         self._initialise_plots()
@@ -148,9 +171,13 @@ class MainWindow(QMainWindow):
         self.keepAcceptingButton = QPushButton(text="Keep Accepting")
         self.keepRejectingButton = QPushButton(text="Keep Rejecting")
         self.pauseButton = QPushButton("Pause")
-        self.turboMode = QPushButton("Toggle Turbo Mode (Turn On/Off Plotting)")
+        self.skipButton = QPushButton("Skip File")
+        self.finishButton = QPushButton("Finish")
+        self.turboMode = QPushButton("Toggle Turbo Mode")
         #LOOP DELAY SETTING
         self.loopDelaySetting = SettingField("Loop Delay /ms")
+        #LOGGER
+        self.logger = QPlainTextEditLogger(self)
         #PACK SETTINGS
         StartUpSettingsLayout.addWidget(self.settingsLabel)
         StartUpSettingsLayout.addWidget(self.sampleRateSetting)
@@ -160,17 +187,22 @@ class MainWindow(QMainWindow):
         StartUpSettingsLayout.addStretch()
         #PACK CONTROLS
         ControlsLayout.addWidget(self.controlsLabel,0,0,1,2)
-        ControlsLayout.addWidget(self.turboMode,1,1,1,2)
-        ControlsLayout.addWidget(self.acceptButton,2,1)
-        ControlsLayout.addWidget(self.rejectButton,2,2)
-        ControlsLayout.addWidget(self.keepAcceptingButton,3,1)
-        ControlsLayout.addWidget(self.keepRejectingButton,3,2)
-        ControlsLayout.addWidget(self.pauseButton,4,1,1,2)
-        ControlsLayout.addWidget(HSeparator(), 5, 1, 1, 2)
-        ControlsLayout.addWidget(self.loopDelaySetting,6,1,1,2)
+        ControlsLayout.addWidget(self.turboMode,0,0)
+        ControlsLayout.addWidget(self.pauseButton,0,1)
+        ControlsLayout.addWidget(self.acceptButton,1,0)
+        ControlsLayout.addWidget(self.rejectButton,1,1)
+        ControlsLayout.addWidget(self.keepAcceptingButton,2,0)
+        ControlsLayout.addWidget(self.keepRejectingButton,2,1)
+        ControlsLayout.addWidget(self.skipButton,3,0)
+        ControlsLayout.addWidget(self.finishButton,3,1)
+        
+        ControlsLayout.addWidget(HSeparator(), 4, 0, 1, 2)
+        ControlsLayout.addWidget(self.loopDelaySetting,5,0,1,2)
         ControlsLayout.setRowStretch(ControlsLayout.rowCount(),1)
         #PACK LAYOUT
         PanelLayout.addLayout(StartUpSettingsLayout)
+        PanelLayout.addWidget(VSeparator())
+        PanelLayout.addWidget(self.logger.widget)
         PanelLayout.addWidget(VSeparator())
         PanelLayout.addLayout(ControlsLayout)
         self.mainLayout.addLayout(PanelLayout)
@@ -179,12 +211,12 @@ class MainWindow(QMainWindow):
         self.setting_names = ["sample_rate", "event_thresh", "event_berth", "gap_tol", "loop_delay"]
         self.settings_dict = dict(zip(self.setting_names,self.settings))
         #PACKAGE CONTROLS INTO LIST FOR EASY HANDLING
-        self.controls = [self.acceptButton, self.rejectButton,self.keepAcceptingButton,self.keepRejectingButton, self.pauseButton, self.turboMode]
+        self.controls = [self.acceptButton, self.rejectButton,self.keepAcceptingButton,self.keepRejectingButton,self.finishButton,self.skipButton, self.pauseButton, self.turboMode]
 
     def get_all_settings(self) -> dict[str,'SettingField']:
         """Get value of every setting and return in dictionary"""
         settings_dict={}
-        for (setting, name) in (self.settings, self.setting_names):
+        for (setting, name) in zip(self.settings, self.setting_names):
             settings_dict[name]=setting.get_val()
         return settings_dict
 
@@ -271,7 +303,11 @@ class SettingField(QWidget):
     def get_val(self):
         """Get value of field"""
         if self.type == 'line':
-            return self.field.text()
+            if "." in self.field.text():
+                val = float(self.field.text())
+            else:
+                val = int(self.field.text())
+            return val
         elif self.type == 'check':
             return self.field.isChecked()
 
