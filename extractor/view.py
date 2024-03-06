@@ -47,11 +47,6 @@ class PlotWithToolbar(QWidget):
         artist = self.canvas.axes.scatter(x_data, y_data, **kwargs)
         self.canvas.draw()
         return artist
-
-    def plot_point(self, point: Point, **kwargs):
-        artist = self.canvas.axes.plot(point.x, point.y, **kwargs)
-        self.canvas.draw()
-        return artist
     
     def fill_between(self, x, y1, y2, **kwargs):
         poly = self.canvas.axes.fill_between(x,y1,y2,**kwargs)
@@ -207,63 +202,8 @@ class PlotPanel(QWidget):
 
     def set_l_label(self, str: str):
         self.l_label.setText(str)
-
-class SettingsControlPanel(QWidget):
-    """Widget with programmatically generated settings fields and control buttons."""
-    def __init__(self, settings: dict, butt_names: list):
-        super().__init__()
-        self.panel_layout = QHBoxLayout()
-        self.setLayout(self.panel_layout)
-        self._create_settings(settings)
-        self.panel_layout.addWidget(VSeparator())
-        self._create_controls(butt_names)
-
-    def _create_settings(self, settings):
-        """Initialises settings panel from initial settings dictionary, placing fields and labels in a square grid."""
-        self.settings_layout = QGridLayout()
-        field_n = len(settings)
-        #Works out dimensions of square grid needed to accommodate all given settings/buttons
-        dim = next_n_squared(field_n)
-        keys = list(settings.keys())
-        #Dictionary for access to settings fields
-        self.fields = {keys[i]:SettingField(keys[i], settings[keys[i]][1]) for i in np.arange(field_n)}
-
-        for i, item in enumerate(self.fields.values()):
-            position = (i//dim, i%dim)
-            self.settings_layout.addWidget(item,position[0], position[1])
-            #Initialises field values to those given in initial settings dictionary
-            item.set_val(settings[item.field_name()][0])
-        
-        self.panel_layout.addLayout(self.settings_layout)
-
-    def _create_controls(self, butt_names):
-        """Initialises buttons from button names list, placing buttons in a square grid."""
-        self.buttons_layout = QGridLayout()
-        butt_n = len(butt_names)
-        #Works out dimensions of square grid needed to accommodate all given settings/buttons
-        dim = next_n_squared(butt_n)
-        #Dictionary for access to buttons
-        self.buttons = {butt_names[i]:QPushButton(butt_names[i]) for i in np.arange(butt_n)}
-
-        for i, button in enumerate(self.buttons.values()):
-            position = (i//dim, i%dim)
-            self.buttons_layout.addWidget(button, position[0], position[1])
-
-        self.panel_layout.addLayout(self.buttons_layout)
-
-    def __getitem__(self, key):
-        """Subscripting method to access settings fields values"""
-        return self.fields[key].get_val()
-
-    def settings_keys(self):
-        """Get view of settings field keys"""
-        return self.fields.keys()
-
-    def button_keys(self):
-        """Get view of button keys"""
-        return self.buttons.keys()
     
-class MainWindow2(QMainWindow):
+class MainWindow(QMainWindow):
     closed = pyqtSignal()
     def __init__(self, title: str):
         """Initialise main window layout and sublayouts."""
@@ -277,6 +217,8 @@ class MainWindow2(QMainWindow):
         self.mainLayout.addWidget(HSeparator())
         self._initialise_plots()
         self._initialise_settings_and_controls()
+        
+        self.show()
 
     def _initialise_IO(self):
         """Initialise IO panel for choosing directory containing tdms files."""
@@ -357,35 +299,6 @@ class MainWindow2(QMainWindow):
         """Causes window to emit 'closed' signal when closed"""
         self.closed.emit()
 
-class MainWindow(QMainWindow):
-    closed = pyqtSignal()
-    def __init__(self, title: str, top: IOPanel, mid: PlotPanel, bott: SettingsControlPanel):
-        """Initialise main window layout and sublayouts."""
-        super().__init__()
-        self.setWindowTitle(title)
-        self.io = top
-        self.plots = mid
-        self.cfg = bott
-        widget = QWidget()
-        self.mainLayout = QVBoxLayout()
-        self._initialise_layout()
-        widget.setLayout(self.mainLayout)
-        self.setCentralWidget(widget)
-
-        self.show()
-
-    def _initialise_layout(self):
-        """Place child widgets separated by lines"""
-        self.mainLayout.addWidget(self.io)
-        self.mainLayout.addWidget(HSeparator())
-        self.mainLayout.addWidget(self.plots)
-        self.mainLayout.addWidget(HSeparator())
-        self.mainLayout.addWidget(self.cfg)
-
-    def closeEvent(self, event):
-        """Causes window to emit 'closed' signal when closed"""
-        self.closed.emit()
-
 class HSeparator(QFrame):
     """Horizontal line separator"""
     def __init__(self):
@@ -460,8 +373,5 @@ class AllDone(QMessageBox):
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    settings = {"Length":("",'line'), "Time":("","line"), "Value":(True, 'check')}
-    button_names = ["Next", "Last", "Accept", "Reject"]
-    w = MainWindow("Hey",IOPanel(), PlotPanel(), SettingsControlPanel(settings, button_names))
-    w.closed.connect(AllDone("It works!"))
+    w = MainWindow("Hey")
     app.exec()
