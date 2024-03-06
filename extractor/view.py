@@ -9,8 +9,9 @@ import sys
 
 class MplCanvas(FigureCanvasQTAgg):
     """MPL/QT Canvas with some default characteristics and some axes."""
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
+    def __init__(self, parent=None, width=5, height=10, dpi=100):
         fig = Figure(figsize=(width, height), dpi=dpi)
+        fig.tight_layout()
         self.axes = fig.add_subplot(111)
         super(MplCanvas, self).__init__(fig)
 
@@ -71,137 +72,6 @@ class PlotWithToolbar(QWidget):
 
     def update(self):
         self.canvas.draw()
-
-class IOPanel(QWidget):
-    """Input/Output panel class for input directory and output filepath selection."""
-    def __init__(self):
-        super().__init__()
-        self.layout = QHBoxLayout()
-        self.setLayout(self.layout)
-        self._create_input_panel()
-        self.layout.addWidget(VSeparator())
-        self._create_output_panel()
-
-    def _create_input_panel(self):
-        """Initialises input side of IOPanel with a browse button and a line editor."""
-        panel_title = QLabel("Input Directory")
-        self.input_dir = QLineEdit()
-        self.in_browse_button = QPushButton("Browse")
-
-        self.input_layout = QVBoxLayout()
-        self.input_layout.addWidget(panel_title)
-        self.input_layout.addWidget(self.input_dir)
-        self.input_layout.addWidget(self.in_browse_button)
-
-        self.layout.addLayout(self.input_layout)
-
-    def _create_output_panel(self):
-        """Initialises output side of IOPanel with a browse button and a line editor."""
-        panel_title = QLabel("Output Filepath")
-        panel_title.setText("Output Filepath")
-        self.output_path = QLineEdit()
-        self.out_browse_button = QPushButton("Browse")
-
-        self.output_layout = QVBoxLayout()
-        self.output_layout.addWidget(panel_title)
-        self.output_layout.addWidget(self.output_path)
-        self.output_layout.addWidget(self.out_browse_button)
-
-        self.layout.addLayout(self.output_layout)
-
-    def get_input_dir(self) -> str:
-        """Convenience method returns whatever is entered in input dir line edit."""
-        return self.input_dir.text()
-
-    def set_input_dir(self, text: str):
-        """Convenience method sets input dir line edit text."""
-        self.input_dir.setText(text)
-
-    def get_output_path(self) -> str:
-        """Convenience method gets whatever is in output path line edit."""
-        return self.output_path.text()
-
-    def set_output_path(self, text: str):
-        """Convenience method sets output path line edit text."""
-        self.output_path.setText(text)
-
-    def lock(self):
-        self.input_dir.setReadOnly(True)
-        self.output_path.setReadOnly(True)
-        self.in_browse_button.setEnabled(False)
-        self.out_browse_button.setEnabled(False)
-
-    def unlock(self):
-        self.input_dir.setReadOnly(True)
-        self.output_path.setReadOnly(True)
-        self.in_browse_button.setEnabled(False)
-        self.out_browse_button.setEnabled(False)
-
-class PlotPanel(QWidget):
-    """Widget with a left and right hand plot."""
-    def __init__(self):
-        super().__init__()
-        self.layout = QHBoxLayout()
-        self.setLayout(self.layout)
-        self._create_left_plot()
-        self.layout.addWidget(VSeparator())
-        self._create_right_plot()
-
-
-    def _create_left_plot(self):
-        """Initialises left hand plot"""
-        self.l_layout = QVBoxLayout()
-        self.l_canvas = MplCanvas(self)
-        self.l_label = QLabel("Trace Plot: ?/?")
-        self.l_canvas.axes.autoscale(True)
-        self.l_layout.addWidget(self.l_label)
-        self.l_layout.addWidget(self.l_canvas)
-        self.layout.addLayout(self.l_layout)
-
-    def _create_right_plot(self):
-        """Initialises right hand plot"""
-        self.r_layout = QVBoxLayout()
-        self.r_canvas = MplCanvas(self)
-        self.r_label = QLabel("Event Plot: ?/?")
-        self.r_canvas.axes.autoscale(True)
-        self.r_layout.addWidget(self.r_label)
-        self.r_layout.addWidget(self.r_canvas)
-        self.layout.addLayout(self.r_layout)
-
-    def l_clear_and_plot(self, ydata, xdata = None, **kwargs):
-        """Clear left hand plot and plot new data on it"""
-        self.l_canvas.axes.cla()
-        if xdata is None:
-            self.l_canvas.axes.plot(ydata, **kwargs)
-        else:
-            self.l_canvas.axes.plot(xdata, ydata, **kwargs)
-        self.l_canvas.draw()
-        
-
-    def r_clear_and_plot(self, ydata, xdata = None, **kwargs):
-        """Clear right hand plot and plot new data on it"""
-        self.r_canvas.axes.cla()
-        if xdata is None:
-            self.r_canvas.axes.plot(ydata, **kwargs)
-        else:
-            self.r_canvas.axes.plot(xdata, ydata, **kwargs)
-        self.r_canvas.draw()
-
-    def r_vline(self, x, **kwargs):
-        """Add vline to right hand plot at specified x"""
-        self.r_canvas.axes.axvline(x, **kwargs)
-        self.r_canvas.draw()
-
-    def l_vline(self, x, **kwargs):
-        """Add vline to left hand plot at specified x"""
-        self.l_canvas.axes.axvline(x, **kwargs)
-        self.l_canvas.draw()
-
-    def set_r_label(self, str: str):
-        self.r_label.setText(str)
-
-    def set_l_label(self, str: str):
-        self.l_label.setText(str)
     
 class MainWindow(QMainWindow):
     closed = pyqtSignal()
@@ -283,6 +153,7 @@ class MainWindow(QMainWindow):
         StartUpSettingsLayout.addWidget(self.eventThresholdSetting)
         StartUpSettingsLayout.addWidget(self.eventBerthSetting)
         StartUpSettingsLayout.addWidget(self.gapTolSetting)
+        StartUpSettingsLayout.addStretch()
         #PACK CONTROLS
         ControlsLayout.addWidget(self.controlsLabel,0,0,1,2)
         ControlsLayout.addWidget(self.turboMode,1,1,1,2)
@@ -293,14 +164,17 @@ class MainWindow(QMainWindow):
         ControlsLayout.addWidget(self.pauseButton,4,1,1,2)
         ControlsLayout.addWidget(HSeparator(), 5, 1, 1, 2)
         ControlsLayout.addWidget(self.loopDelaySetting,6,1,1,2)
+        ControlsLayout.setRowStretch(ControlsLayout.rowCount(),1)
         #PACK LAYOUT
         PanelLayout.addLayout(StartUpSettingsLayout)
         PanelLayout.addWidget(VSeparator())
         PanelLayout.addLayout(ControlsLayout)
         self.mainLayout.addLayout(PanelLayout)
         #PACKAGE SETTINGS INTO LIST FOR EASY READING
-        self.settings = [self.sampleRateSetting,self.eventThresholdSetting, self.eventBerthSetting, self.gapTolSetting]
-        self.setting_names = ["sample_rate", "event_thresh", "event_berth", "gap_tol"]
+        self.settings = [self.sampleRateSetting,self.eventThresholdSetting, self.eventBerthSetting, self.gapTolSetting, self.loopDelaySetting]
+        self.setting_names = ["sample_rate", "event_thresh", "event_berth", "gap_tol", "loop_delay"]
+        #PACKAGE CONTROLS INTO LIST FOR EASY HANDLING
+        self.controls = [self.acceptButton, self.rejectButton,self.keepAcceptingButton,self.keepRejectingButton, self.pauseButton, self.turboMode]
 
     def get_all_settings(self) -> dict:
         """Get value of every setting and return in dictionary"""
@@ -324,16 +198,26 @@ class MainWindow(QMainWindow):
         self.inputLineEdit.setReadOnly(False)
 
     def lock_start_settings(self):
-        pass
+        """Lock all settings except last one (Which should be the loop delay setting)"""
+        for setting in self.settings[:-1]: 
+            setting.lock_field()
 
     def unlock_start_settings(self):
-        pass
+        """Unock all settings except last one (Which should be the loop delay setting)"""
+        for setting in self.settings[:-1]: 
+            setting.unlock_field()
 
     def lock_controls_loop(self):
-        pass
+        """Locks all controls except Pause and Turbo Mode which should remain available in the loop"""
+        for control in self.controls[:-2]:
+            control.setEnabled(False)
+        self.loopDelaySetting.lock_field()
 
     def unlock_controls_loop(self):
-        pass
+        """Unlocks all controls usually locked in the loop (Pause and Turbo Mode)"""
+        for control in self.controls[:-2]:
+            control.setEnabled(True)
+        self.loopDelaySetting.unlock_field()
 
     def closeEvent(self,_):
         """Causes window to emit 'closed' signal when closed"""
