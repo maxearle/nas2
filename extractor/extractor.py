@@ -11,6 +11,6 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     app = QApplication(sys.argv)
     model = Model()
-    w = MainWindow(title = "Extractor v2.0gamma")
+    w = MainWindow(title = "Extractor v2.0")
     ctrlr = Controller(w,model)
     app.exec()
