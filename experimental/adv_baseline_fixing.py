@@ -151,8 +151,8 @@ def rle(inarray):
             p = np.cumsum(np.append(0, z))[:-1] # positions
             return(z, p, ia[i])
 
-def find_most_persistent_value(indata, area_thresh=0.05, smoothing=1, n_bins = 50):
-    cts, bin_mids, _ ,bin_lims= hist_bin(indata, n_bins)
+def find_most_persistent_value(indata, area_thresh=0.05, smoothing=1, n_bins = 100):
+    cts, bin_mids, bin_spacing ,bin_lims= hist_bin(indata, n_bins)
     cts_smoothed = gaussian_filter(cts, sigma=1)
     hst_pks = get_persistent_homology(cts_smoothed)
     pklims = [find_peak_lims(cts_smoothed, hst_pks[n].born) for n in np.arange(len(hst_pks))] #Find peak lims for each peak in the histogram with the turn method
@@ -172,10 +172,9 @@ def find_most_persistent_value(indata, area_thresh=0.05, smoothing=1, n_bins = 5
         cts_clipped[:pair[0]] = 0
         cts_clipped[pair[1]] =0
         peaks = np.append(peaks, np.argmax(cts_clipped))
-    return [[bin_lims[sig_pklims[i][0]][0], bin_lims[sig_pklims[i][1]][1]] for i in np.arange(len(sig_pklims))], max_run, peaks, bin_mids
-
+    return [[bin_lims[sig_pklims[i][0]][0], bin_lims[sig_pklims[i][1]][1]] for i in np.arange(len(sig_pklims))], max_run, peaks, bin_mids, bin_spacing
 if __name__ == "__main__":
-    filename = r"C:\Users\me424\Desktop\gdata\_600_24-02-19_1626_001.tdms"
+    filename = r"F:\nanopores\2023_12_7\ch3\p3#\expt2_data\m13_1M_600_23-12-07_1554_007.tdms"
     file = nt.TdmsFile.read(filename)
 
     #Find channel containing samples
@@ -199,7 +198,7 @@ if __name__ == "__main__":
     bsln_range = value_persistence[0][np.argmax(value_persistence[1])]
     bsln_peak = value_persistence[2][np.argmax(value_persistence[1])]
     peak_val = value_persistence[3][int(bsln_peak)]
-    bsln_mask = np.abs(dt - peak_val) < 0.3
+    bsln_mask = np.abs(dt - peak_val) < 2*value_persistence[4]
     bsln_x = np.arange(len(dt))[bsln_mask]
     bsln_y = dt[bsln_mask]
     popt, _ = curve_fit(line, bsln_x, bsln_y)

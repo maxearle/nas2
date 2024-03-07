@@ -249,9 +249,11 @@ class Model():
             return a*x + b
         dt = self.current_data
         dt_x = np.arange(len(dt))
-        value_persistence = find_most_persistent_value(dt,area_thresh=0)
-        bsln_range = value_persistence[0][np.argmax(value_persistence[1])]
-        bsln_mask = np.logical_and(dt > bsln_range[0], dt < bsln_range[1])
+        lims, persistence, peaks, mids, spacing = find_most_persistent_value(dt,area_thresh=0,n_bins=100)
+        bsln_range = lims[np.argmax(persistence)]
+        bsln_peak = peaks[np.argmax(persistence)]
+        peak_val = mids[int(bsln_peak)]
+        bsln_mask = np.abs(dt - peak_val) < 2*spacing
         bsln_x = np.arange(len(dt))[bsln_mask]
         bsln_y = dt[bsln_mask]
         popt, _ = curve_fit(line, bsln_x, bsln_y)

@@ -151,7 +151,7 @@ def rle(inarray):
             return(z, p, ia[i])
 
 def find_most_persistent_value(indata, area_thresh=0.05, smoothing=1, n_bins = 50):
-    cts, _, _ ,bin_lims= hist_bin(indata, n_bins)
+    cts, bin_mids, bin_spacing ,bin_lims= hist_bin(indata, n_bins)
     cts_smoothed = gaussian_filter(cts, sigma=1)
     hst_pks = get_persistent_homology(cts_smoothed)
     pklims = [find_peak_lims(cts_smoothed, hst_pks[n].born) for n in np.arange(len(hst_pks))] #Find peak lims for each peak in the histogram with the turn method
@@ -160,13 +160,18 @@ def find_most_persistent_value(indata, area_thresh=0.05, smoothing=1, n_bins = 5
     sig_pklims = list(compress(pklims, sig_ars_bool)) #Get corresponding significant peak lims
 
     max_run = np.array([])
+    peaks = np.array([])
     for pair in sig_pklims:
         bools = np.logical_and((indata >= bin_lims[pair[0]][0]), (indata <= bin_lims[pair[1]][1]))
         rns = rle(bools)
         lns = rns[0][rns[2]]
         mx = np.max(lns)
         max_run = np.append(max_run,mx)
-    return [[bin_lims[sig_pklims[i][0]][0], bin_lims[sig_pklims[i][1]][1]] for i in np.arange(len(sig_pklims))], max_run
+        cts_clipped = cts_smoothed
+        cts_clipped[:pair[0]] = 0
+        cts_clipped[pair[1]] =0
+        peaks = np.append(peaks, np.argmax(cts_clipped))
+    return [[bin_lims[sig_pklims[i][0]][0], bin_lims[sig_pklims[i][1]][1]] for i in np.arange(len(sig_pklims))], max_run, peaks, bin_mids, bin_spacing
 
 if __name__ == "__main__":
     filename = r"E:\Raluca29Feb24\0.0025TWEEN_300pmsample4.3\2600_24-02-29_1359_006.tdms"

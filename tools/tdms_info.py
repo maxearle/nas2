@@ -4,7 +4,7 @@ Use this script to analyse a TDMS file for diagnostic purposes.
 
 import nptdms as nt
 
-filename = r"E:\Raluca29Feb24\0.0025TWEEN_300pmsample4.3\2600_24-02-29_1400_018.tdms"
+filename = r"E:\For Max March 4 2024\With Urea\11111timecourse-Jan30-2024\Separateevent     1.tdms"
 
 dt = nt.TdmsFile.read(filename)
 grps = dt.groups()
