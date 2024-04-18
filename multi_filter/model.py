@@ -10,6 +10,20 @@ class BadIndex(Exception):
 def check_path_existence(path: str) -> bool:
     return os.path.exists(path)
 
+def diff_dfs(df1,df2):
+    if df1 is None:
+        return df2
+    elif df2 is None:
+        return df1
+    return pd.concat([df1,df2]).drop_duplicates(keep=False)
+
+def union_dfs(df1,df2):
+    if df1 is None:
+        return df2
+    elif df2 is None:
+        return df1
+    return pd.concat([df1,df2]).drop_duplicates(keep='first')
+
 def remove_bad_values(array: np.ndarray) -> np.ndarray:
     return array[np.isfinite(array)]
 
@@ -25,7 +39,7 @@ def get_line(point1: 'Point', point2: 'Point') -> tuple[float, float]:
 def get_distance(pt1: 'Point', pt2: 'Point') -> float:
     return np.sqrt((pt2.x-pt1.x)**2 + (pt2.y-pt1.y)**2)
 
-def get_nearest(df: pd.DataFrame, params: tuple[str,str], pt: 'Point') -> dict:
+def get_nearest(df: pd.DataFrame, params: tuple[str,str], pt: 'Point') -> pd.DataFrame:
     for i, row in enumerate(df.iterrows()):
         rowPt = Point(float(row[1][params[0]]), float(row[1][params[1]]))
         dist = get_distance(pt, rowPt)
@@ -39,7 +53,7 @@ def get_nearest(df: pd.DataFrame, params: tuple[str,str], pt: 'Point') -> dict:
             closest = i
             closest_dist = dist
     
-    return df.iloc[closest,:].to_dict()
+    return df.iloc[closest,:]
 
 def straight_line(x, b, a):
     return b*x + a
@@ -58,6 +72,8 @@ class Point():
 
 class Model():
     df: pd.DataFrame | None = None
+    selection: pd.DataFrame | None = None
+    current: pd.DataFrame | None = None
     data: h5py.File | None = None
     name_column_index: int | None = None
     def __init__(self):
@@ -96,7 +112,7 @@ class Model():
                             (click_loc.y - tol*full_param_ranges[1], click_loc.y + tol*full_param_ranges[1]))
             
             #First deal with nans
-            dfInfToNan = self.df.replace([np.inf, -np.inf], np.nan, inplace=False)
+            dfInfToNan = self.df.replace([np.inf, -np.inf], np.nan, inplace=False).infer_objects(copy=False)
             conditionedDf = dfInfToNan.dropna(subset = [params[0],params[1]], how = 'all')
 
             #Then select shortlist

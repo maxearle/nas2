@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QApplication
 import logging
 
 if __name__ == '__main__':
-    version = '1.1'
+    version = '1.2'
     logging.basicConfig(level = logging.INFO)
     app = QApplication(sys.argv)
     ctrlr = Controller(version)

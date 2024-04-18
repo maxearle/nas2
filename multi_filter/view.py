@@ -35,6 +35,13 @@ class PlotWithToolbar(QWidget):
         self.canvas.axes.set_title(self.title)
         self.canvas.draw()
 
+    def reset_title(self):
+        self.canvas.axes.set_title(self.title)
+
+    def set_title(self, title):
+        self.canvas.axes.set_title(title)
+        self.canvas.draw()
+
     def plot(self, x_data, y_data, **kwargs):
         artist = self.canvas.axes.plot(x_data, y_data, **kwargs)
         self.canvas.draw()
@@ -92,6 +99,7 @@ class MainWindow(QMainWindow):
     plotsLayout = QHBoxLayout()
     controlsLayout = QHBoxLayout()
     mainLayout = QVBoxLayout()
+    keyPressed = pyqtSignal(int)
     def __init__(self, version = None):
         super().__init__()
         self.setWindowTitle(f"Filter - v:{version}")
@@ -105,6 +113,10 @@ class MainWindow(QMainWindow):
         self._initialise_controls()
 
         self.show()
+
+    def keyPressEvent(self, event):
+        super(QMainWindow,self).keyPressEvent(event)
+        self.keyPressed.emit(event.key())
     
     #INITIALISATION
     def _initialise_IO(self):
@@ -155,11 +167,12 @@ class MainWindow(QMainWindow):
 
     def _initialise_controls(self):
         #Buttons
-        self.chooseFirstButton = QPushButton("Choose Point 1")
-        self.chooseSecButton = QPushButton("Choose Point 2")
-        self.chooseRegionButton = QPushButton("Choose Plot Region to Save")
-        self.resetAllButton = QPushButton("Reset All Choices")
-        self.saveSelectionButton = QPushButton("Save Subset to Dataframe")
+        self.splitLineButton = QPushButton("Create Split Line Selection")
+        self.lassoButton = QPushButton("Select Points with Lasso")
+        self.deletePoints = QPushButton("Delete Selected Points (D)")
+        self.keepPoints = QPushButton("Keep Only Selected Points (K)")
+        self.resetAllButton = QPushButton("Reset Selection")
+        self.saveSelectionButton = QPushButton("Save Subset to Dataframe (S)")
         self.updatePlotButton = QPushButton("Update Plot")
         #Labels
         xLabel = QLabel("x-Axis Parameter")
@@ -174,9 +187,11 @@ class MainWindow(QMainWindow):
         self.controlsLayout.addWidget(self.yBox)
         self.controlsLayout.addWidget(self.updatePlotButton)
         self.controlsLayout.addWidget(VSeparator())
-        self.controlsLayout.addWidget(self.chooseFirstButton)
-        self.controlsLayout.addWidget(self.chooseSecButton)
-        self.controlsLayout.addWidget(self.chooseRegionButton)
+        self.controlsLayout.addWidget(self.splitLineButton)
+        self.controlsLayout.addWidget(self.lassoButton)
+        self.controlsLayout.addWidget(VSeparator())
+        self.controlsLayout.addWidget(self.deletePoints)
+        self.controlsLayout.addWidget(self.keepPoints)
         self.controlsLayout.addWidget(VSeparator())
         self.controlsLayout.addWidget(self.resetAllButton)
         self.controlsLayout.addWidget(self.saveSelectionButton)
