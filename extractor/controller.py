@@ -55,7 +55,9 @@ class Controller():
         self._v.lock_all_controls()
 
     def _get_default_settings(self):
-        cfg_filename = "cfg.txt"
+        __location__ = os.path.realpath(
+        os.path.join(os.getcwd(), os.path.dirname(__file__)))
+        cfg_filename = os.path.join(__location__, 'cfg.txt')
         with open(cfg_filename) as f:
             for line in f:
                 if line[0] == "#":

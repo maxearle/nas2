@@ -116,8 +116,8 @@ class Model():
             conditionedDf = dfInfToNan.dropna(subset = [params[0],params[1]], how = 'all')
 
             #Then select shortlist
-            subDf1 = conditionedDf.query(f"{params[0]} > {param_ranges[0][0]} & {params[0]} < {param_ranges[0][1]}")
-            subDf2 = subDf1.query(f"{params[1]} > {param_ranges[1][0]} & {params[1]} < {param_ranges[1][1]}")
+            subDf1 = conditionedDf.query(f"`{params[0]}` > {param_ranges[0][0]} & `{params[0]}` < {param_ranges[0][1]}")
+            subDf2 = subDf1.query(f"`{params[1]}` > {param_ranges[1][0]} & `{params[1]}` < {param_ranges[1][1]}")
 
             if len(subDf2) == 0:
                 return None
