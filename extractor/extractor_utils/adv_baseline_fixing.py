@@ -152,11 +152,11 @@ def rle(inarray):
 
 def find_most_persistent_value(indata, area_thresh=0.05, smoothing=1, n_bins = 50):
     cts, bin_mids, bin_spacing ,bin_lims= hist_bin(indata, n_bins)
-    cts_smoothed = gaussian_filter(cts, sigma=1)
+    cts_smoothed = gaussian_filter(cts, sigma=smoothing)
     hst_pks = get_persistent_homology(cts_smoothed)
     pklims = [find_peak_lims(cts_smoothed, hst_pks[n].born) for n in np.arange(len(hst_pks))] #Find peak lims for each peak in the histogram with the turn method
     ars = [np.trapz(cts[l:r]) if r < len(cts)-1 else np.trapz(cts[l:]) for l, r in pklims] #Get area of each peak using peak lims
-    sig_ars_bool = ars > np.trapz(cts_smoothed)*area_thresh #Get a mask for peaks with areas representing greater than 10% of the total
+    sig_ars_bool = ars > np.trapz(cts_smoothed)*area_thresh #Get a mask for peaks with areas representing greater than a fraction area_thresh of the total
     sig_pklims = list(compress(pklims, sig_ars_bool)) #Get corresponding significant peak lims
 
     max_run = np.array([])

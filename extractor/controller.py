@@ -12,6 +12,7 @@ from view import MainWindow
 from model import Model
 import glob
 import datetime
+import sys
 
 class Controller():
     """This class is the home of all the spaghetti in this program. It ties together the view part of the program(GUI) and the underlying
@@ -89,7 +90,6 @@ class Controller():
         self._v.pauseButton.clicked.connect(self.pause)
         self._v.finishButton.clicked.connect(self.finish)
         self._v.turboMode.clicked.connect(self.turbo_switch)
-        self._v.closed.connect(self.finish)
 
     def _initialise_data_and_display(self):
         #Checking path/file validity
@@ -140,7 +140,7 @@ class Controller():
                     self._v.tracePlot.plot_vline(pos/int(self.settings_dict['sample_rate']), c='r')
 
         except EventError:
-            logging.info("Event index is NaN, moving to next batch.")
+            logging.info(f"Finished file '{self._m.tdms.file_list[self._m.tdms.current_file]}'")
             self.next_valid_batch()
 
     def process_next(self):
@@ -152,7 +152,7 @@ class Controller():
             except ReachedEnd:
                 self.finish()
             self.current_trace_n += 1
-            logging.info("Correcting trace slope")
+            logging.debug("Correcting trace slope")
             try:
                 self._m.slope_fix_average_run_method(self._m.current_data)
             except:
@@ -161,7 +161,7 @@ class Controller():
                 continue
             self._m.update_event_boundaries(float(self.settings_dict['event_thresh']), int(self.settings_dict["gap_tol"]))
             if len(self._m.event_boundaries) == 0:
-                logging.info(f"No events in file {self._m.tdms.get_file_name()}, moving on...")
+                logging.debug(f"No events in file {self._m.tdms.get_file_name()}, moving on...")
                 writeline_in(self.dump_path,f"{datetime.datetime.now()}: Found no events in {self._m.tdms.get_file_name()}.")
                 continue
             break
@@ -171,7 +171,7 @@ class Controller():
 
     def accept_event(self):
         """Creates new dataset for event on plot and moves onto next"""
-        logging.info("Creating new dataset for accepted event.")
+        logging.debug("Creating new dataset for accepted event.")
         self.accepted_count += 1
         berth = int(self.settings_dict["event_berth"])
         sample_rate = int(self.settings_dict["sample_rate"])
@@ -264,7 +264,7 @@ class Controller():
             logging.debug("No event plot produced due to turbo mode.")
 
     def update_l_label(self):
-        self._v.tracePlot.set_title(f"Trace: {self.current_trace_n}/{len(self._m.tdms)} \n {self._m.tdms.get_file_name()}")
+        self._v.tracePlot.set_title(f"Trace: {self.current_trace_n}/{len(self._m.tdms)}, baseline noise {self._m.noise} \n {self._m.tdms.get_file_name()}")
 
     def update_r_label(self):
         """Updates right plot label with current event number / events in batch as well as the current status of the accept/reject loops.
@@ -282,4 +282,7 @@ class Controller():
         """Closes output file and the window"""
         self._v.close()
         self._m.output_df.to_pickle(os.path.join(self.dir_path, "props.pkl"))
+        self._m.output.close()
         AllDone(f"All done! {len(self._m.tdms.file_list)} tdms files read, {self.accepted_count} events saved.")
+        sys.exit()
+        

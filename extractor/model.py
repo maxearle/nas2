@@ -122,7 +122,11 @@ class TdmsDir():
     def load_file_data(self, index: int | None = None):
         """Reads the current file if no index is provided, otherwise the specified file."""
         if index is None:
-            file = nt.TdmsFile.read(self.file_list[self.current_file])
+            try:
+                file = nt.TdmsFile.read(self.file_list[self.current_file])
+            except:
+                logging.info(f"Problem reading file '{self.file_list[self.current_file]}', skipping.")
+                raise FileError(f"Could not load file '{self.file_list[self.current_file]}'")
         elif index + 1 > len(self.file_list):
             raise BadIndex(f"Index {index} is invalid for TdmsDir of length {len(self.file_list)}")
         else:
@@ -215,11 +219,16 @@ class Model():
             self.output_df = pd.concat([pd.DataFrame(),new_row], ignore_index=True)
         else:
             self.output_df = pd.concat([self.output_df, new_row], ignore_index=True)
-        logging.info("New row successfully added to dataframe.")
+        logging.debug("New row successfully added to dataframe.")
         
     def next_file(self):
-        self.tdms.next_file()
-        self.current_data = self.tdms.load_file_data()
+        while True:
+            self.tdms.next_file()
+            try:
+                self.current_data = self.tdms.load_file_data()
+                break
+            except FileError:
+                continue
         self.bsln = None
         self.noise = None
 
@@ -267,17 +276,24 @@ class Model():
         logging.debug(f"Generating event attrs for cropped event of length {len(cropped_event)}")
         c_e_l = len(cropped_event)
         c_e_a = np.trapz(cropped_event)
+        try:
+            peak = np.min(cropped_event)
+        except:
+            peak = 0
+            logging.debug("Peak could not be found for event.")
         attrs = {
             'name':name,
             "samples":c_e_l,
             "duration_s":c_e_l/sample_rate,
+            "peak":peak,
             "ecd":c_e_a/sample_rate,
             "mean":np.mean(cropped_event),
             "ffap":np.trapz(cropped_event[:(c_e_l)//5])/c_e_a,
             "lfap":np.trapz(cropped_event[(-(c_e_l)//5):])/c_e_a,
             "skew":np.trapz(cropped_event*np.linspace(0,1,len(cropped_event)))/np.trapz(cropped_event*np.linspace(1,0,len(cropped_event))),
             "event_timestamp_s":int(os.path.getmtime(self.tdms.get_file_name())),
-            "trace_baseline_nA":self.bsln
+            "trace_baseline_nA":self.bsln,
+            "trace_noise_nA":self.noise
         }
         try:
             attrs["linearity"] = np.sqrt(np.sum(np.diag(self.slope_fix(cropped_event)[1])))
@@ -341,7 +357,7 @@ class Model():
             self.current_event_index = 0
         else:
             self.current_event_index += 1
-        logging.info(f"Selected event {self.current_event_index + 1} of {len(self.event_boundaries)}")
+        logging.debug(f"Selected event {self.current_event_index + 1} of {len(self.event_boundaries)}")
         try:
             curr_event_boundaries = self.event_boundaries[self.current_event_index]
             logging.debug("Index valid, updating boundaries")
@@ -366,3 +382,8 @@ class Model():
 class EventError(Exception):
     def __init__(self, msg: str):
         super().__init__(msg)       
+
+
+class FileError(Exception):
+    def __init__(self, msg: str):
+        super().__init__(msg)      
