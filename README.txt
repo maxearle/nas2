@@ -5,5 +5,5 @@ Python Version=3.12.2
 -Undo Function
 -Inspect data for a single event (Maybe easier to do after developing dataframe explorer)
 -Marginal distributions
-To extract events from baseline, first use the extractor GUI. For data cleanup use multi_filter, and if required use the assignment_checker to assign barcodes to events.
+To extract events from baseline, first use the extractor GUI. For data cleanup use multi_filter, and if required use the assignment_checker to assign barcodes to events. An example trace (example_trace.tdms) is provided for testing the software.
 """
