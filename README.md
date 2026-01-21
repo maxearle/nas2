@@ -1,12 +1,3 @@
-**04/03/2024 Max Earle**
-""" See requirements.txt for package versions, which can be installed directly using pip install -r requirements.txt."""
-Python Version=3.12.2
-"""TODO:
--Undo Function
--Inspect data for a single event (Maybe easier to do after developing dataframe explorer)
--Marginal distributions
-To extract events from baseline, first use the extractor GUI. For data cleanup use multi_filter, and if required use the assignment_checker to assign barcodes to events. An example trace (example_trace.tdms) is provided for testing the software.
-"""
 # Nanopore Analysis Suite 2 (nas2)
 This is the second version of the nas (Nanopore Analysis Suite) collection of Python software for analysing tdms files containing nanopore impedance sensing data. It was developed by Max K. Earle whilst working towards his PhD at the University of Cambridge supervised by Prof. Ulrich Keyser, and was written to facilitate the analysis of data from nanopore impedance sensing at KeyserLab. The extractor software was made significantly more robust for data from busy samples in order to allow the analysis of total RNA ([Patiño-Guillén, G., Pešović, J., Panić, M., Earle, M., Ninković, A., Petruşca, S., ... & Bošković, F. (2025). Quantification of disease-associated RNA tandem repeats by nanopore sensing. bioRxiv, 2025-05.](https://www.biorxiv.org/content/10.1101/2025.05.15.653973v1.abstract))
 
